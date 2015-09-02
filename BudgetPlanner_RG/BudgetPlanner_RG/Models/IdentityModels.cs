@@ -18,7 +18,7 @@ namespace BudgetPlanner_RG.Models
         }
 
         public string DisplayName { get; set; }
-        public int HouseHoldId { get; set; }
+        public int? HouseHoldId  { get; set; }
 
         public virtual HouseHold HouseHold { get; set; }
     }
@@ -44,5 +44,7 @@ namespace BudgetPlanner_RG.Models
         public System.Data.Entity.DbSet<BudgetPlanner_RG.Models.HouseHoldAccount> HouseHoldAccounts { get; set; }
 
         public System.Data.Entity.DbSet<BudgetPlanner_RG.Models.Transaction> Transactions { get; set; }
+
+        public System.Data.Entity.DbSet<BudgetPlanner_RG.Models.Invitation> Invitations { get; set; }
     }
 }

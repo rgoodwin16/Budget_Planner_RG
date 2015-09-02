@@ -16,6 +16,8 @@ using Microsoft.Owin.Security.OAuth;
 using BudgetPlanner_RG.Models;
 using BudgetPlanner_RG.Providers;
 using BudgetPlanner_RG.Results;
+using System.Web.Http.Description;
+using System.Linq;
 
 namespace BudgetPlanner_RG.Controllers
 {
@@ -25,6 +27,7 @@ namespace BudgetPlanner_RG.Controllers
     {
         private const string LocalLoginProvider = "Local";
         private ApplicationUserManager _userManager;
+        private ApplicationDbContext db = new ApplicationDbContext();
 
         public AccountController()
         {
@@ -373,6 +376,75 @@ namespace BudgetPlanner_RG.Controllers
             return Ok();
         }
 
+        //HOUSEHOLD - GET | CREATE
+
+        // GET: api/HouseHolds - GET ALL HOUSEHOLDS
+        
+        [Route("HouseHolds")]
+        public IQueryable<HouseHold> GetHouseHolds()
+        {
+            return db.HouseHolds;
+        }
+
+        // GET: api/HouseHolds/5 - GET SPECIFIC HOUSEHOLD
+        
+        [Route("HouseHold")]
+        [ResponseType(typeof(HouseHold))]
+        public async Task<IHttpActionResult> GetHouseHold(int id)
+        {
+            HouseHold houseHold = await db.HouseHolds.FindAsync(id);
+            if (houseHold == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(houseHold);
+        }
+
+        // POST: api/Account/HouseHolds - CREATE NEW HOUSEHOLD
+        
+        [ResponseType(typeof(HouseHold))]
+        [Route("CreateHouseHold")]
+        public async Task<IHttpActionResult> PostHouseHold(string name)
+        {
+            HouseHold houseHold = new HouseHold()
+            {
+                Name = name
+            };
+            
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            db.HouseHolds.Add(houseHold);
+            await db.SaveChangesAsync();
+
+            return Ok(houseHold);
+        }
+
+        //POST: api/Account/HouseHolds/SendInvite - CREATE NEW INVITE
+
+        [ResponseType(typeof(HouseHold))]
+        [Route("CreateInvite")]
+        public async Task<IHttpActionResult> PostInvite(string InviteEmail)
+        {
+            var user = db.Users.Find(User.Identity.GetUserId());
+            var code = new InviteCode();
+            var invite = new Invitation() 
+            {
+                Code = code.MakeCode(),
+                HouseHoldId = user.HouseHoldId,
+                InvitedEmail = InviteEmail
+            };
+
+            db.Invitations.Add(invite);
+
+            var invitedUserExists = db.Users.Any(u => u.Email == InviteEmail);
+            var mailer = new EmailService
+
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing && _userManager != null)
@@ -486,6 +558,17 @@ namespace BudgetPlanner_RG.Controllers
                 byte[] data = new byte[strengthInBytes];
                 _random.GetBytes(data);
                 return HttpServerUtility.UrlTokenEncode(data);
+            }
+        }
+
+
+        public class InviteCode
+        {
+            public string MakeCode()
+            {
+                var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                var random = new Random();
+                return new string (Enumerable.Range(0,8).Select(n=>chars[random.Next(chars.Length)]).ToArray());
             }
         }
 
