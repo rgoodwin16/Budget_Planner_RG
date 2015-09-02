@@ -61,3 +61,5 @@ C:\Users\nanye\Documents\GitHub\Budget_Planner_RG\BudgetPlanner_RG\BudgetPlanner
 C:\Users\nanye\Documents\GitHub\Budget_Planner_RG\BudgetPlanner_RG\BudgetPlanner_RG\obj\Debug\BudgetPlanner_RG.csprojResolveAssemblyReference.cache
 C:\Users\nanye\Documents\GitHub\Budget_Planner_RG\BudgetPlanner_RG\BudgetPlanner_RG\obj\Debug\BudgetPlanner_RG.dll
 C:\Users\nanye\Documents\GitHub\Budget_Planner_RG\BudgetPlanner_RG\BudgetPlanner_RG\obj\Debug\BudgetPlanner_RG.pdb
+C:\Users\nanye\Documents\GitHub\Budget_Planner_RG\BudgetPlanner_RG\BudgetPlanner_RG\bin\SendGrid.SmtpApi.dll
+C:\Users\nanye\Documents\GitHub\Budget_Planner_RG\BudgetPlanner_RG\BudgetPlanner_RG\bin\SendGridMail.dll

@@ -340,6 +340,11 @@ namespace BudgetPlanner_RG.Controllers
                 return GetErrorResult(result);
             }
 
+            if (model.isInvited)
+            {
+                return await PostJoinHouseHold(model.invitedEmail, model.invitedCode);
+            }
+
             return Ok();
         }
 
@@ -423,27 +428,96 @@ namespace BudgetPlanner_RG.Controllers
             return Ok(houseHold);
         }
 
-        //POST: api/Account/HouseHolds/SendInvite - CREATE NEW INVITE
+        //POST: api/Account/CreateInvite - CREATE NEW INVITE
 
-        [ResponseType(typeof(HouseHold))]
+        [ResponseType(typeof(Invitation))]
         [Route("CreateInvite")]
-        public async Task<IHttpActionResult> PostInvite(string InviteEmail)
+        public async Task<IHttpActionResult> PostInvite(string inviteEmail)
         {
             var user = db.Users.Find(User.Identity.GetUserId());
             var code = new InviteCode();
-            var invite = new Invitation() 
+
+            var inviteExists = db.Invitations.Any(i => i.InvitedEmail == inviteEmail);
+            
+            var invite = new Invitation();
+            
+            if (inviteExists)
+            {
+                invite = db.Invitations.Where(i=> i.InvitedEmail == inviteEmail).FirstOrDefault();
+            }
+            
+            else 
+            {
+                invite = new Invitation() 
             {
                 Code = code.MakeCode(),
                 HouseHoldId = user.HouseHoldId,
-                InvitedEmail = InviteEmail
+                InvitedEmail = inviteEmail
             };
 
             db.Invitations.Add(invite);
 
-            var invitedUserExists = db.Users.Any(u => u.Email == InviteEmail);
-            var mailer = new EmailService
+            }
+            
+            var invitedUserExists = db.Users.Any(u=> u.Email == inviteEmail);
+
+            //var url = invitedUserExists ? Url.Link("JoinHouseHoldEU", "") : Url.Link("JoinHouseHoldNU", "");
+            
+            var mailer = new EmailService();
+            var message = new IdentityMessage() 
+            {
+                Subject = "New Invitation from rgoodwin-budget.azurewebsites.net",
+                Destination = inviteEmail,
+                Body = "You have been invited to join " + user.UserName + "'s HouseHold. To join please follow this <a href=\'" + "\'>link </a> and use this code: " + invite.Code
+            };
+
+            await db.SaveChangesAsync();
+            await mailer.SendAsync(message);
+
+            return Ok(invite);
 
         }
+
+        //POST: api/Account/JoinHouseHold - JOIN HOUSEHOLD
+
+        [ResponseType(typeof(HouseHold))]
+        [Route("JoinHouseHold")]
+        public async Task<IHttpActionResult> PostJoinHouseHold(string inviteEmail, string inviteCode)
+        {
+            var user = db.Users.Find(User.Identity.GetUserId());
+            var invite = db.Invitations.Where(i => i.Code == inviteCode && i.InvitedEmail == inviteEmail).FirstOrDefault();
+            
+            if (invite != null)
+            {
+                user.HouseHoldId = invite.HouseHoldId;
+                db.Invitations.Remove(invite);
+            }
+
+            else
+            {
+                return NotFound();
+            }
+
+            await db.SaveChangesAsync();
+
+            //return RedirectToRoute("", "");
+            return Ok(user.HouseHold);
+        }
+
+        //POST: api/Account/LeaveHouseHold - LEAVE HOUSEHOLD
+        [ResponseType(typeof(HouseHold))]
+        [Route("LeaveHouseHold")]
+        public async Task<IHttpActionResult> PostLeaveHouseHold(HouseHold houseHold)
+        {
+            var user = db.Users.Find(User.Identity.GetUserId());
+
+            user.HouseHoldId = null;
+            await db.SaveChangesAsync();
+
+            //return RedirectToRoute("", "");
+            return Ok(houseHold);
+        }
+
 
         protected override void Dispose(bool disposing)
         {
