@@ -340,12 +340,14 @@ namespace BudgetPlanner_RG.Controllers
                 return GetErrorResult(result);
             }
 
-            if (model.isInvited)
+            if (model.invitedEmail != null && model.invitedCode != null)
             {
-                return await PostJoinHouseHold(model.invitedEmail, model.invitedCode);
+                var newUser = db.Users.Where(u => u.Email == model.Email).FirstOrDefault();//We need to create a var to hold the new user we just created to send to the PostJoinHouseHold method
+                await PostJoinHouseHold(model.invitedEmail, model.invitedCode,newUser);
             }
 
-            return Ok();
+
+            return Ok(model);
         }
 
         // POST api/Account/RegisterExternal
@@ -482,26 +484,46 @@ namespace BudgetPlanner_RG.Controllers
 
         [ResponseType(typeof(HouseHold))]
         [Route("JoinHouseHold")]
-        public async Task<IHttpActionResult> PostJoinHouseHold(string inviteEmail, string inviteCode)
+        public async Task<IHttpActionResult> PostJoinHouseHold(string inviteEmail, string inviteCode, ApplicationUser newUser)
         {
-            var user = db.Users.Find(User.Identity.GetUserId());
-            var invite = db.Invitations.Where(i => i.Code == inviteCode && i.InvitedEmail == inviteEmail).FirstOrDefault();
-            
-            if (invite != null)
+            if (newUser != null)//Check and see if this user was just created from the Register method
             {
-                user.HouseHoldId = invite.HouseHoldId;
-                db.Invitations.Remove(invite);
+                var user = newUser;
+                var invite = db.Invitations.Where(i => i.Code == inviteCode && i.InvitedEmail == inviteEmail).FirstOrDefault();
+
+                if (invite == null)
+                {
+                    return NotFound();
+                }
+
+                else
+                {
+                    user.HouseHoldId = invite.HouseHoldId;
+                    db.Invitations.Remove(invite);
+                }
             }
 
             else
             {
-                return NotFound();
+                var user = db.Users.Find(User.Identity.GetUserId());
+                var invite = db.Invitations.Where(i => i.Code == inviteCode && i.InvitedEmail == inviteEmail).FirstOrDefault();
+
+                if (invite == null)
+                {
+                    return NotFound();
+                }
+
+                else
+                {
+                    user.HouseHoldId = invite.HouseHoldId;
+                    db.Invitations.Remove(invite);
+                }
             }
 
             await db.SaveChangesAsync();
 
             //return RedirectToRoute("", "");
-            return Ok(user.HouseHold);
+            return Ok();
         }
 
         //POST: api/Account/LeaveHouseHold - LEAVE HOUSEHOLD
