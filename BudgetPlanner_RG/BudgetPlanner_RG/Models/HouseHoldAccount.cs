@@ -15,7 +15,8 @@ namespace BudgetPlanner_RG.Models
         public int id { get; set; }
         public string Name { get; set; }
         public decimal Balance { get; set; }
-        public int HoseHoldId { get; set; }
+        public int HouseHoldId { get; set; }
+        public bool isArchived { get; set; }
 
         public virtual ICollection<Transaction> Transactions { get; set; }
 

@@ -414,20 +414,33 @@ namespace BudgetPlanner_RG.Controllers
         [Route("CreateHouseHold")]
         public async Task<IHttpActionResult> PostHouseHold(string name)
         {
-            HouseHold houseHold = new HouseHold()
+            var user = db.Users.Find(User.Identity.GetUserId());
+
+            if (user.HouseHoldId != null)
             {
-                Name = name
-            };
-            
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
+                var message = "You must leave your current household before you can create a new household";
+                return Ok(message);
             }
 
-            db.HouseHolds.Add(houseHold);
-            await db.SaveChangesAsync();
+            else
+            {
+                HouseHold houseHold = new HouseHold()
+                {
+                    Name = name
+                };
 
-            return Ok(houseHold);
+                user.HouseHoldId = houseHold.id;
+
+                db.HouseHolds.Add(houseHold);
+                await db.SaveChangesAsync();
+                       
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+                       
+                return Ok(houseHold);
+            }            
         }
 
         //POST: api/Account/CreateInvite - CREATE NEW INVITE

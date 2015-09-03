@@ -19,6 +19,8 @@ namespace BudgetPlanner_RG.Models
         public int CategoryId { get; set; }
         public int HouseHoldAccountId { get; set; }
 
+        public bool isArchived { get; set; }
+
         public virtual Category Category { get; set; }
         public virtual HouseHoldAccount HouseHoldAccount { get; set; }
 

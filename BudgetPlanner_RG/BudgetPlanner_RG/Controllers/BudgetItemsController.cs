@@ -17,13 +17,28 @@ namespace BudgetPlanner_RG.Controllers
     {
         private ApplicationDbContext db = new ApplicationDbContext();
 
-        // GET: api/BudgetItems
+        // GET: api/BudgetItems - GET ALL BUDGET ITEMS FOR THIS HOUSEHOLD
         public IQueryable<BudgetItem> GetBudgetItems()
         {
             return db.BudgetItems;
         }
 
-        // GET: api/BudgetItems/5
+        // POST: api/BudgetItems - CREATE BUDGET ITEM
+        [ResponseType(typeof(BudgetItem))]
+        public async Task<IHttpActionResult> PostBudgetItem(BudgetItem budgetItem)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            db.BudgetItems.Add(budgetItem);
+            await db.SaveChangesAsync();
+
+            return CreatedAtRoute("DefaultApi", new { id = budgetItem.id }, budgetItem);
+        }
+
+        // GET: api/BudgetItems/5 - GET BUDGET ITEM
         [ResponseType(typeof(BudgetItem))]
         public async Task<IHttpActionResult> GetBudgetItem(int id)
         {
@@ -36,7 +51,7 @@ namespace BudgetPlanner_RG.Controllers
             return Ok(budgetItem);
         }
 
-        // PUT: api/BudgetItems/5
+        // PUT: api/BudgetItems/5 - EDIT BUDGET ITEM
         [ResponseType(typeof(void))]
         public async Task<IHttpActionResult> PutBudgetItem(int id, BudgetItem budgetItem)
         {
@@ -71,22 +86,7 @@ namespace BudgetPlanner_RG.Controllers
             return StatusCode(HttpStatusCode.NoContent);
         }
 
-        // POST: api/BudgetItems
-        [ResponseType(typeof(BudgetItem))]
-        public async Task<IHttpActionResult> PostBudgetItem(BudgetItem budgetItem)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            db.BudgetItems.Add(budgetItem);
-            await db.SaveChangesAsync();
-
-            return CreatedAtRoute("DefaultApi", new { id = budgetItem.id }, budgetItem);
-        }
-
-        // DELETE: api/BudgetItems/5
+        // DELETE: api/BudgetItems/5 - DELETE BUDGET ITEM
         [ResponseType(typeof(BudgetItem))]
         public async Task<IHttpActionResult> DeleteBudgetItem(int id)
         {
