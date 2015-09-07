@@ -342,8 +342,20 @@ namespace BudgetPlanner_RG.Controllers
 
             if (model.invitedEmail != null && model.invitedCode != null)
             {
-                var newUser = db.Users.Where(u => u.Email == model.Email).FirstOrDefault();//We need to create a var to hold the new user we just created to send to the PostJoinHouseHold method
-                await PostJoinHouseHold(model.invitedEmail, model.invitedCode,newUser);
+                var newUser = db.Users.Where(u => u.Email == model.Email).FirstOrDefault();
+                var invite = db.Invitations.Where(i => i.Code == model.invitedCode && i.InvitedEmail == model.invitedEmail).FirstOrDefault();
+
+                if (invite == null)
+                {
+                    return NotFound();
+                }
+
+                else
+                {
+                    newUser.HouseHoldId = invite.HouseHoldId;
+                    db.Invitations.Remove(invite);
+                    await db.SaveChangesAsync();
+                }
             }
 
 
@@ -383,35 +395,38 @@ namespace BudgetPlanner_RG.Controllers
             return Ok();
         }
 
-        //HOUSEHOLD - GET | CREATE
+        //HOUSEHOLD - GET | CREATE | JOIN | LEAVE
 
-        // GET: api/HouseHolds - GET ALL HOUSEHOLDS
-        
-        [Route("HouseHolds")]
-        public IQueryable<HouseHold> GetHouseHolds()
-        {
-            return db.HouseHolds;
-        }
 
-        // GET: api/HouseHolds/5 - GET SPECIFIC HOUSEHOLD
-        
-        [Route("HouseHold")]
+        // GET: api/HouseHolds/5 - GET USER'S HOUSEHOLD
+
+        [HttpPost, Route("HouseHold")]
         [ResponseType(typeof(HouseHold))]
-        public async Task<IHttpActionResult> GetHouseHold(int id)
+        public IHttpActionResult GetHouseHold()
         {
-            HouseHold houseHold = await db.HouseHolds.FindAsync(id);
+            var user = db.Users.Find(User.Identity.GetUserId());
+            var houseHold = user.HouseHold;
+
+            var returnHouse = new HouseHoldVM()
+            {
+                Accounts = houseHold.HouseHoldAccounts.Where(a=> a.isArchived == false).ToList(),
+                BudgetItems = houseHold.BudgetItems.ToList(),
+                Users = houseHold.Users.ToList()
+
+            };
+                        
             if (houseHold == null)
             {
-                return NotFound();
+                return Ok("User is not currently a memeber of a household.");
             }
 
-            return Ok(houseHold);
+            return Ok(returnHouse);
         }
 
         // POST: api/Account/HouseHolds - CREATE NEW HOUSEHOLD
         
         [ResponseType(typeof(HouseHold))]
-        [Route("CreateHouseHold")]
+        [HttpPost, Route("CreateHouseHold")]
         public async Task<IHttpActionResult> PostHouseHold(string name)
         {
             var user = db.Users.Find(User.Identity.GetUserId());
@@ -424,7 +439,7 @@ namespace BudgetPlanner_RG.Controllers
 
             else
             {
-                HouseHold houseHold = new HouseHold()
+                var houseHold = new HouseHold()
                 {
                     Name = name
                 };
@@ -433,20 +448,23 @@ namespace BudgetPlanner_RG.Controllers
 
                 db.HouseHolds.Add(houseHold);
                 await db.SaveChangesAsync();
-                       
-                if (!ModelState.IsValid)
+
+                var returnHouse = new HouseHoldVM()
                 {
-                    return BadRequest(ModelState);
-                }
-                       
-                return Ok(houseHold);
+                    Accounts = houseHold.HouseHoldAccounts.Where(a => a.isArchived == false).ToList(),
+                    BudgetItems = houseHold.BudgetItems.ToList(),
+                    Users = houseHold.Users.ToList()
+
+                };
+
+                return Ok(returnHouse);
             }            
         }
 
         //POST: api/Account/CreateInvite - CREATE NEW INVITE
 
         [ResponseType(typeof(Invitation))]
-        [Route("CreateInvite")]
+        [HttpPost, Route("CreateInvite")]
         public async Task<IHttpActionResult> PostInvite(string inviteEmail)
         {
             var user = db.Users.Find(User.Identity.GetUserId());
@@ -464,13 +482,13 @@ namespace BudgetPlanner_RG.Controllers
             else 
             {
                 invite = new Invitation() 
-            {
-                Code = code.MakeCode(),
-                HouseHoldId = user.HouseHoldId,
-                InvitedEmail = inviteEmail
-            };
+                {
+                    Code = code.MakeCode(),
+                    HouseHoldId = user.HouseHoldId,
+                    InvitedEmail = inviteEmail
+                };
 
-            db.Invitations.Add(invite);
+                db.Invitations.Add(invite);
 
             }
             
@@ -496,61 +514,50 @@ namespace BudgetPlanner_RG.Controllers
         //POST: api/Account/JoinHouseHold - JOIN HOUSEHOLD
 
         [ResponseType(typeof(HouseHold))]
-        [Route("JoinHouseHold")]
-        public async Task<IHttpActionResult> PostJoinHouseHold(string inviteEmail, string inviteCode, ApplicationUser newUser)
+        [HttpPost, Route("JoinHouseHold")]
+        public async Task<IHttpActionResult> PostJoinHouseHold(JoinHouseVM model)
         {
-            if (newUser != null)//Check and see if this user was just created from the Register method
-            {
-                var user = newUser;
-                var invite = db.Invitations.Where(i => i.Code == inviteCode && i.InvitedEmail == inviteEmail).FirstOrDefault();
+          
+          var user = db.Users.Find(User.Identity.GetUserId());
+          var invite = db.Invitations.Where(i => i.Code == model.inviteCode && i.InvitedEmail == model.inviteEmail).FirstOrDefault();
+          
+          if (invite == null)
+          {
+            return NotFound();
+          }
+          
+          else
+          {
+            user.HouseHoldId = invite.HouseHoldId;
+            db.Invitations.Remove(invite);
+          }
 
-                if (invite == null)
-                {
-                    return NotFound();
-                }
+         await db.SaveChangesAsync();
 
-                else
-                {
-                    user.HouseHoldId = invite.HouseHoldId;
-                    db.Invitations.Remove(invite);
-                }
-            }
+         var houseHold = user.HouseHold;
 
-            else
-            {
-                var user = db.Users.Find(User.Identity.GetUserId());
-                var invite = db.Invitations.Where(i => i.Code == inviteCode && i.InvitedEmail == inviteEmail).FirstOrDefault();
+         var returnHouse = new HouseHoldVM()
+         {
+             Accounts = houseHold.HouseHoldAccounts.Where(a => a.isArchived == false).ToList(),
+             BudgetItems = houseHold.BudgetItems.ToList(),
+             Users = houseHold.Users.ToList()
 
-                if (invite == null)
-                {
-                    return NotFound();
-                }
+         };
 
-                else
-                {
-                    user.HouseHoldId = invite.HouseHoldId;
-                    db.Invitations.Remove(invite);
-                }
-            }
-
-            await db.SaveChangesAsync();
-
-            //return RedirectToRoute("", "");
-            return Ok();
+         return Ok(returnHouse);
         }
 
         //POST: api/Account/LeaveHouseHold - LEAVE HOUSEHOLD
         [ResponseType(typeof(HouseHold))]
-        [Route("LeaveHouseHold")]
-        public async Task<IHttpActionResult> PostLeaveHouseHold(HouseHold houseHold)
+        [HttpPost, Route("LeaveHouseHold")]
+        public async Task<IHttpActionResult> PostLeaveHouseHold()
         {
             var user = db.Users.Find(User.Identity.GetUserId());
 
             user.HouseHoldId = null;
             await db.SaveChangesAsync();
-
-            //return RedirectToRoute("", "");
-            return Ok(houseHold);
+            
+            return Ok(user + " has been successfully removed.");
         }
 
 

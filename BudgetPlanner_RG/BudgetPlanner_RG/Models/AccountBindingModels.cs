@@ -49,7 +49,7 @@ namespace BudgetPlanner_RG.Models
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; }
 
-        public bool isInvited { get; set; }
+        
         public string  invitedCode { get; set; }
         public string  invitedEmail { get; set; }
 

@@ -11,148 +11,150 @@ using System.Web.Http;
 using System.Web.Http.Description;
 using BudgetPlanner_RG.Models;
 using Microsoft.AspNet.Identity;
+using WebApiContrib.ModelBinders;
 
 namespace BudgetPlanner_RG.Controllers
 {
+
+    [Authorize]
+    [RoutePrefix("api/HouseHoldAccounts")]
     public class HouseHoldAccountsController : ApiController
     {
         private ApplicationDbContext db = new ApplicationDbContext();
 
-        // GET: api/HouseHoldAccounts - LIST ALL ACCOUNTS FOR THIS USER'S HOUSEHOLD
+        // POST: api/HouseHoldAccounts - LIST ALL ACCOUNTS FOR THIS USER'S HOUSEHOLD
+        [HttpPost,Route("GetAccounts")]
         public IHttpActionResult GetHouseHoldAccounts()
         {
             var user = db.Users.Find(User.Identity.GetUserId());
-            var accounts = user.HouseHold.HouseHoldAccounts.ToList();
-
+            var accounts = user.HouseHold.HouseHoldAccounts.Where(a => a.isArchived == false).ToList();
+            
             return Ok(accounts);
             
         }
 
         // POST: api/HouseHoldAccounts - CREATE ACCOUNT
         [ResponseType(typeof(HouseHoldAccount))]
-        public async Task<IHttpActionResult> PostHouseHoldAccount(HouseHoldAccount houseHoldAccount, string name)
+        [HttpPost, Route("CreateAccount")]
+        public async Task<IHttpActionResult> PostHouseHoldAccount(HouseHoldAccount model)
         {
+            var user = db.Users.Find(User.Identity.GetUserId());
+            
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            var user = db.Users.Find(User.Identity.GetUserId());
 
             var account = new HouseHoldAccount()
             {
-                Name = name,
-                Balance = 0,
+                Name = model.Name,
+                Balance = model.Balance,
                 HouseHoldId = (int)user.HouseHoldId
             };
 
 
-            db.HouseHoldAccounts.Add(houseHoldAccount);
+            db.HouseHoldAccounts.Add(account);
+
+            var trans = new Transaction()
+            {
+                Description = "New Account: " + model.Name + " created.",
+                Amount = model.Balance,
+                HouseHoldAccountId = model.id,
+                CategoryId = 1,
+                Created = DateTimeOffset.Now,
+
+            };
+
+            db.Transactions.Add(trans);
+            
             await db.SaveChangesAsync();
 
-            return CreatedAtRoute("DefaultApi", new { id = houseHoldAccount.id }, houseHoldAccount);
+            return Ok(account);
         }
 
-        // GET: api/HouseHoldAccounts/5 - GET ACCOUNT
+        // POST: api/HouseHoldAccounts/5 - GET ACCOUNT
         [ResponseType(typeof(HouseHoldAccount))]
-        public async Task<IHttpActionResult> GetHouseHoldAccount(int id)
+        [HttpPost, Route("GetAccount")]
+        public IHttpActionResult GetHouseHoldAccount(int id)
         {
-            HouseHoldAccount houseHoldAccount = await db.HouseHoldAccounts.FindAsync(id);
-            if (houseHoldAccount == null || houseHoldAccount.isArchived)
+            var user = db.Users.Find(User.Identity.GetUserId());
+            var account = user.HouseHold.HouseHoldAccounts.Where(a => a.id == id && !a.isArchived).FirstOrDefault();
+
+            if (account == null)
             {
                 return NotFound();
             }
 
-            return Ok(houseHoldAccount);
+            return Ok(account);
         }
 
-        // PUT: api/HouseHoldAccounts/5 - EDIT ACCOUNT
-        [ResponseType(typeof(void))]
-        public async Task<IHttpActionResult> PutHouseHoldAccount(int id, HouseHoldAccount houseHoldAccount, string name)
+        // POST: api/HouseHoldAccounts/5 - EDIT ACCOUNT
+
+        [HttpPost, Route("EditAccount")]
+        public async Task<IHttpActionResult> EditHouseHoldAccount(HouseHoldAccount model)
         {
+           
+            var oldAccount = db.HouseHoldAccounts.AsNoTracking().FirstOrDefault(a => a.id == model.id);
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            if (id != houseHoldAccount.id)
+            //check if name changed
+            if (oldAccount.Name != model.Name)
             {
-                return BadRequest();
+                oldAccount.Name = model.Name;
             }
 
-            if (!string.IsNullOrWhiteSpace(name))
+            //check balance
+            if (oldAccount.Balance != model.Balance)
             {
-                houseHoldAccount.Name = name;
-            }
-
-            db.Entry(houseHoldAccount).State = EntityState.Modified;
-
-            try
-            {
-                await db.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!HouseHoldAccountExists(id))
+                var adjBal = oldAccount.Balance - model.Balance;
+                
+                db.Transactions.Add(new Transaction()
                 {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                    Description = "User Adjusted Balance",
+                    Amount = adjBal,
+                    CategoryId = 2,
+                    Created = DateTimeOffset.Now,
+                    HouseHoldAccountId = model.id
+                });
+
+                oldAccount.Balance -= adjBal;
+                    
             }
 
-            return StatusCode(HttpStatusCode.NoContent);
+            await db.SaveChangesAsync();
+            return Ok(oldAccount);
+        
         }
 
-        // DELETE: api/HouseHoldAccounts/5 - ARCHIVE ACCOUNT
+        // POST: api/HouseHoldAccounts/5 - ARCHIVE ACCOUNT
         [ResponseType(typeof(HouseHoldAccount))]
-        public async Task<IHttpActionResult> ArchiveHouseHoldAccount(int id)
+        [HttpPost, Route("ArchiveAccount")]
+        public async Task<IHttpActionResult> ArchiveAccount(int id)
         {
-            HouseHoldAccount houseHoldAccount = await db.HouseHoldAccounts.FindAsync(id);
 
-            if (houseHoldAccount == null)
+            var user = db.Users.Find(User.Identity.GetUserId());
+            var account = user.HouseHold.HouseHoldAccounts.FirstOrDefault(a => a.id == id);
+
+            if (account == null)
             {
                 return NotFound();
             }
 
-            houseHoldAccount.isArchived = true;
+            account.isArchived = true;
 
-            foreach (var trans in houseHoldAccount.Transactions)
+            foreach (var trans in account.Transactions)
             {
                 trans.isArchived = true;
             }
-
-            db.HouseHoldAccounts.Remove(houseHoldAccount);
+            
             await db.SaveChangesAsync();
 
-            return Ok(houseHoldAccount);
-        }
-
-        // PUT: api/HouseHoldAccounts/5 - ADJUST ACCOUNT BALANCE
-        [ResponseType(typeof(void))]
-        public async Task<IHttpActionResult> AdjustBalance(int id, decimal newBalance)
-        {
-            var user = db.Users.Find(User.Identity.GetUserId());
-            var account = user.HouseHold.HouseHoldAccounts.FirstOrDefault(a => a.id == id);
-
-            var adjBal = account.Balance - newBalance;
-            db.Transactions.Add(new Transaction()
-
-            {
-                Description = "User Adjusted Balance",
-                Amount = adjBal,
-                CategoryId = 1,
-                Created = DateTimeOffset.Now,
-                HouseHoldAccountId = id
-
-            });
-
-            account.Balance -= adjBal;
-            await db.SaveChangesAsync();
-            return Ok();
-
+            return Ok("The account: " + account.Name + " has been archived.");
         }
 
 

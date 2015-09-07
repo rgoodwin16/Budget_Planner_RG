@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
@@ -21,7 +22,9 @@ namespace BudgetPlanner_RG.Models
 
         public bool isArchived { get; set; }
 
+        [JsonIgnore]
         public virtual Category Category { get; set; }
+        [JsonIgnore]
         public virtual HouseHoldAccount HouseHoldAccount { get; set; }
 
     }

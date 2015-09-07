@@ -17,6 +17,7 @@ namespace BudgetPlanner_RG.Models
         public string Name { get; set; }
 
         public virtual ICollection<BudgetItem> BudgetItems { get; set; }
+        
         public virtual ICollection<Transaction> Transactions { get; set; }
     }
 }
