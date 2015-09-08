@@ -10,7 +10,7 @@ namespace BudgetPlanner_RG.Models
     {
         public int id { get; set; }
         public string Description { get; set; }
-        public string Status { get; set; }
+        public string Type { get; set; }
 
         public decimal Amount { get; set; }
         public System.DateTimeOffset Created { get; set; }
@@ -23,7 +23,7 @@ namespace BudgetPlanner_RG.Models
         public bool isArchived { get; set; }
 
         [JsonIgnore]
-        public virtual Category Category { get; set; }
+        public virtual Category Categories { get; set; }
         [JsonIgnore]
         public virtual HouseHoldAccount HouseHoldAccount { get; set; }
 

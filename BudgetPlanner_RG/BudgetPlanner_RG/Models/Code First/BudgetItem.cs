@@ -8,6 +8,7 @@ namespace BudgetPlanner_RG.Models
     public class BudgetItem
     {
         public int id { get; set; }
+        public string Name { get; set; }
         public decimal Amount { get; set; }
 
         public int HouseHoldId { get; set; }

@@ -407,20 +407,25 @@ namespace BudgetPlanner_RG.Controllers
             var user = db.Users.Find(User.Identity.GetUserId());
             var houseHold = user.HouseHold;
 
-            var returnHouse = new HouseHoldVM()
-            {
-                Accounts = houseHold.HouseHoldAccounts.Where(a=> a.isArchived == false).ToList(),
-                BudgetItems = houseHold.BudgetItems.ToList(),
-                Users = houseHold.Users.ToList()
-
-            };
-                        
             if (houseHold == null)
             {
                 return Ok("User is not currently a memeber of a household.");
             }
 
-            return Ok(returnHouse);
+            else
+            {
+                var returnHouse = new HouseHoldVM()
+                {
+                    Accounts = houseHold.HouseHoldAccounts.Where(a => a.isArchived == false).ToList(),
+                    BudgetItems = houseHold.BudgetItems.ToList(),
+                    Users = houseHold.Users.ToList()
+
+                };
+
+                return Ok(returnHouse);
+            }
+
+
         }
 
         // POST: api/Account/HouseHolds - CREATE NEW HOUSEHOLD

@@ -10,39 +10,81 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Description;
 using BudgetPlanner_RG.Models;
+using Microsoft.AspNet.Identity;
 
 namespace BudgetPlanner_RG.Controllers
 {
+    [Authorize]
+    [RoutePrefix("api/BudgetItems")]
     public class BudgetItemsController : ApiController
     {
         private ApplicationDbContext db = new ApplicationDbContext();
 
-        // GET: api/BudgetItems - GET ALL BUDGET ITEMS FOR THIS HOUSEHOLD
-        public IQueryable<BudgetItem> GetBudgetItems()
+        // POST: api/BudgetItems - GET ALL BUDGET ITEMS FOR THIS HOUSEHOLD
+        [HttpPost,Route("Index")]
+        public IHttpActionResult Index()
         {
-            return db.BudgetItems;
+            var user = db.Users.Find(User.Identity.GetUserId());
+
+            try
+            {
+                var bItems = user.HouseHold.BudgetItems.ToList();
+                return Ok(bItems);
+            }
+
+            catch (NullReferenceException)
+            {
+                return Ok("No Budget Items found.");
+            }
+            
         }
 
         // POST: api/BudgetItems - CREATE BUDGET ITEM
         [ResponseType(typeof(BudgetItem))]
-        public async Task<IHttpActionResult> PostBudgetItem(BudgetItem budgetItem)
+        [HttpPost, Route("Create")]
+        public async Task<IHttpActionResult> Create(BudgetItem model)
         {
+            var user = db.Users.Find(User.Identity.GetUserId());
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            db.BudgetItems.Add(budgetItem);
-            await db.SaveChangesAsync();
+            var budgetItemExits = user.HouseHold.BudgetItems.Any(bi => bi.Name == model.Name);
 
-            return CreatedAtRoute("DefaultApi", new { id = budgetItem.id }, budgetItem);
+            if (budgetItemExits) 
+            {
+                return Ok("You already have a budget item called: " + model.Name + " . Please chose another name.");
+            }
+
+            else
+            {
+                var budgetItem = new BudgetItem()
+                {
+                    Name = model.Name,
+                    Amount = model.Amount,
+                    HouseHoldId = (int)user.HouseHoldId,
+                    CategoryId = model.CategoryId,
+                    Frequency = model.Frequency
+                };
+
+                db.BudgetItems.Add(budgetItem);
+                await db.SaveChangesAsync();
+
+                return Ok(budgetItem);
+            }
+
         }
 
         // GET: api/BudgetItems/5 - GET BUDGET ITEM
         [ResponseType(typeof(BudgetItem))]
-        public async Task<IHttpActionResult> GetBudgetItem(int id)
+        [HttpPost,Route("Details")]
+        public IHttpActionResult Details(int id)
         {
-            BudgetItem budgetItem = await db.BudgetItems.FindAsync(id);
+            var user = db.Users.Find(User.Identity.GetUserId());
+            var budgetItem = user.HouseHold.BudgetItems.FirstOrDefault(bi => bi.id == id);
+
             if (budgetItem == null)
             {
                 return NotFound();
@@ -53,42 +95,45 @@ namespace BudgetPlanner_RG.Controllers
 
         // PUT: api/BudgetItems/5 - EDIT BUDGET ITEM
         [ResponseType(typeof(void))]
-        public async Task<IHttpActionResult> PutBudgetItem(int id, BudgetItem budgetItem)
+        [HttpPost,Route("Edit")]
+        public async Task<IHttpActionResult> Edit(int id, BudgetItem model)
         {
+            var oldBudgetItem = db.BudgetItems.FirstOrDefault(bi => bi.id == model.id);
+            
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            if (id != budgetItem.id)
+            //check if name changed
+            if (oldBudgetItem.Name != model.Name)
             {
-                return BadRequest();
-            }
-
-            db.Entry(budgetItem).State = EntityState.Modified;
-
-            try
-            {
+                oldBudgetItem.Name = model.Name;
                 await db.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException)
+
+            //check if amount changed
+            if (oldBudgetItem.Amount != oldBudgetItem.Amount)
             {
-                if (!BudgetItemExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                oldBudgetItem.Amount = model.Amount;
+                await db.SaveChangesAsync();
             }
 
-            return StatusCode(HttpStatusCode.NoContent);
+            //check if frquency changed
+            if (oldBudgetItem.Frequency != model.Frequency)
+            {
+                oldBudgetItem.Frequency = model.Frequency;
+                await db.SaveChangesAsync();
+            }
+
+            return Ok(oldBudgetItem);
+
         }
 
         // DELETE: api/BudgetItems/5 - DELETE BUDGET ITEM
         [ResponseType(typeof(BudgetItem))]
-        public async Task<IHttpActionResult> DeleteBudgetItem(int id)
+        [HttpPost,Route("Delete")]
+        public async Task<IHttpActionResult> Delete(int id)
         {
             BudgetItem budgetItem = await db.BudgetItems.FindAsync(id);
             if (budgetItem == null)

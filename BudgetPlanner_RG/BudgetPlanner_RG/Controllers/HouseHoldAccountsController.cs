@@ -23,8 +23,8 @@ namespace BudgetPlanner_RG.Controllers
         private ApplicationDbContext db = new ApplicationDbContext();
 
         // POST: api/HouseHoldAccounts - LIST ALL ACCOUNTS FOR THIS USER'S HOUSEHOLD
-        [HttpPost,Route("GetAccounts")]
-        public IHttpActionResult GetHouseHoldAccounts()
+        [HttpPost,Route("Index")]
+        public IHttpActionResult Index()
         {
             var user = db.Users.Find(User.Identity.GetUserId());
             var accounts = user.HouseHold.HouseHoldAccounts.Where(a => a.isArchived == false).ToList();
@@ -35,8 +35,8 @@ namespace BudgetPlanner_RG.Controllers
 
         // POST: api/HouseHoldAccounts - CREATE ACCOUNT
         [ResponseType(typeof(HouseHoldAccount))]
-        [HttpPost, Route("CreateAccount")]
-        public async Task<IHttpActionResult> PostHouseHoldAccount(HouseHoldAccount model)
+        [HttpPost, Route("Create")]
+        public async Task<IHttpActionResult> Create(HouseHoldAccount model)
         {
             var user = db.Users.Find(User.Identity.GetUserId());
             
@@ -45,38 +45,47 @@ namespace BudgetPlanner_RG.Controllers
                 return BadRequest(ModelState);
             }
 
+            var accountNameExists = user.HouseHold.HouseHoldAccounts.Any(a => a.Name == model.Name);
 
-            var account = new HouseHoldAccount()
+            if (accountNameExists)
             {
-                Name = model.Name,
-                Balance = model.Balance,
-                HouseHoldId = (int)user.HouseHoldId
-            };
+                return Ok("You already have an account called: " + model.Name + " . Please chose another name.");
+            }
 
-
-            db.HouseHoldAccounts.Add(account);
-
-            var trans = new Transaction()
+            else
             {
-                Description = "New Account: " + model.Name + " created.",
-                Amount = model.Balance,
-                HouseHoldAccountId = model.id,
-                CategoryId = 1,
-                Created = DateTimeOffset.Now,
+                var account = new HouseHoldAccount()
+                {
+                    Name = model.Name,
+                    Balance = model.Balance,
+                    HouseHoldId = (int)user.HouseHoldId
+                };
 
-            };
+                db.HouseHoldAccounts.Add(account);
 
-            db.Transactions.Add(trans);
+                var trans = new Transaction()
+                {
+                    Description = "New Account: " + model.Name + " created.",
+                    Amount = model.Balance,
+                    HouseHoldAccountId = model.HouseHoldId,
+                    CategoryId = 1,
+                    Created = DateTimeOffset.Now,
+
+                };
+
+                db.Transactions.Add(trans);
+
+                await db.SaveChangesAsync();
+
+                return Ok(account);
+            }
             
-            await db.SaveChangesAsync();
-
-            return Ok(account);
         }
 
         // POST: api/HouseHoldAccounts/5 - GET ACCOUNT
         [ResponseType(typeof(HouseHoldAccount))]
-        [HttpPost, Route("GetAccount")]
-        public IHttpActionResult GetHouseHoldAccount(int id)
+        [HttpPost, Route("Details")]
+        public IHttpActionResult Details(int id)
         {
             var user = db.Users.Find(User.Identity.GetUserId());
             var account = user.HouseHold.HouseHoldAccounts.Where(a => a.id == id && !a.isArchived).FirstOrDefault();
@@ -91,11 +100,11 @@ namespace BudgetPlanner_RG.Controllers
 
         // POST: api/HouseHoldAccounts/5 - EDIT ACCOUNT
 
-        [HttpPost, Route("EditAccount")]
-        public async Task<IHttpActionResult> EditHouseHoldAccount(HouseHoldAccount model)
+        [HttpPost, Route("Edit")]
+        public async Task<IHttpActionResult> Edit(HouseHoldAccount model)
         {
            
-            var oldAccount = db.HouseHoldAccounts.AsNoTracking().FirstOrDefault(a => a.id == model.id);
+            var oldAccount = db.HouseHoldAccounts.FirstOrDefault(a => a.id == model.id);
 
             if (!ModelState.IsValid)
             {
@@ -106,6 +115,7 @@ namespace BudgetPlanner_RG.Controllers
             if (oldAccount.Name != model.Name)
             {
                 oldAccount.Name = model.Name;
+                await db.SaveChangesAsync();
             }
 
             //check balance
@@ -123,18 +133,18 @@ namespace BudgetPlanner_RG.Controllers
                 });
 
                 oldAccount.Balance -= adjBal;
-                    
+                await db.SaveChangesAsync();     
             }
 
-            await db.SaveChangesAsync();
+            
             return Ok(oldAccount);
         
         }
 
         // POST: api/HouseHoldAccounts/5 - ARCHIVE ACCOUNT
         [ResponseType(typeof(HouseHoldAccount))]
-        [HttpPost, Route("ArchiveAccount")]
-        public async Task<IHttpActionResult> ArchiveAccount(int id)
+        [HttpPost, Route("Archive")]
+        public async Task<IHttpActionResult> Archive(int id)
         {
 
             var user = db.Users.Find(User.Identity.GetUserId());
