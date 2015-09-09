@@ -1,0 +1,70 @@
+﻿<h1>{{house.display.Name}} HouseHold</h1>
+
+<div class="row">
+
+    <div class="col-md-8">
+
+        <h3>Members</h3>
+        <table class="table table-responsive table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr ng-repeat="user in house.display.Users">
+                    <td>{{user.DisplayName}}</td>
+                    <td>{{user.Email}}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr />
+
+        <h3>Invite</h3>
+        <p>Invite someone to join your household.</p>
+        
+        <form novalidate class="form-inline">
+            <div class="form-group">
+                <input type="email" ng-model="house.inviteEmail" class="form-control" placeholder="Email"/>
+            </div>
+                <input type="submit" class="btn btn-default" value="Send Invitation" ng-click="house.createInvite()" />
+        </form>
+
+        <hr />
+
+        <h3>Leave</h3>
+        <p>Leave this household and start a new one.</p>
+
+        <form novalidate class="simple-form">
+            <input type="checkbox" /> I understand that by leaving this household, I will no longer have access to this household's accounts.
+            <br />
+            <br />
+            <input type="submit" class="btn btn-warning" value="Leave This HouseHold" ng-click="house.leaveHousse()" />
+        </form>
+        
+
+    </div><!-- /left column -->
+
+    <div class="col-md-4">
+        <h3>Accounts</h3>
+        <table class="table table-responsive table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Balance</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr ng-repeat="account in house.display.Accounts">
+                    <td>{{account.Name}}</td>
+                    <td>${{account.Balance}}</td>
+                    <td><a class="btn btn-info btn-sm" ui-sref="account({id:account.Id})">View</a></td>
+                </tr>
+            </tbody>
+        </table>
+    </div><!-- /right column -->
+
+</div><!-- /row -->

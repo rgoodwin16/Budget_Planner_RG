@@ -416,6 +416,7 @@ namespace BudgetPlanner_RG.Controllers
             {
                 var returnHouse = new HouseHoldVM()
                 {
+                    Name = user.HouseHold.Name,
                     Accounts = houseHold.HouseHoldAccounts.Where(a => a.isArchived == false).ToList(),
                     BudgetItems = houseHold.BudgetItems.ToList(),
                     Users = houseHold.Users.ToList()

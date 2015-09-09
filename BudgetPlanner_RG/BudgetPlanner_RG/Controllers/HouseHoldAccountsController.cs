@@ -12,6 +12,7 @@ using System.Web.Http.Description;
 using BudgetPlanner_RG.Models;
 using Microsoft.AspNet.Identity;
 using WebApiContrib.ModelBinders;
+using BudgetPlanner_RG.Libraries;
 
 namespace BudgetPlanner_RG.Controllers
 {
@@ -103,20 +104,12 @@ namespace BudgetPlanner_RG.Controllers
         [HttpPost, Route("Edit")]
         public async Task<IHttpActionResult> Edit(HouseHoldAccount model)
         {
-           
-            var oldAccount = db.HouseHoldAccounts.FirstOrDefault(a => a.id == model.id);
-
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-
-            //check if name changed
-            if (oldAccount.Name != model.Name)
-            {
-                oldAccount.Name = model.Name;
-                await db.SaveChangesAsync();
-            }
+           
+            var oldAccount = db.HouseHoldAccounts.AsNoTracking().FirstOrDefault(a => a.id == model.id);
 
             //check balance
             if (oldAccount.Balance != model.Balance)
@@ -133,10 +126,12 @@ namespace BudgetPlanner_RG.Controllers
                 });
 
                 oldAccount.Balance -= adjBal;
-                await db.SaveChangesAsync();     
+                    
             }
 
-            
+            db.Update<HouseHoldAccount>(model, "Name", "Balance");
+
+            await db.SaveChangesAsync(); 
             return Ok(oldAccount);
         
         }

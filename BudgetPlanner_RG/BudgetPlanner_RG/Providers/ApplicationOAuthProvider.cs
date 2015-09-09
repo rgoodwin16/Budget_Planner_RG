@@ -50,6 +50,19 @@ namespace BudgetPlanner_RG.Providers
             context.Request.Context.Authentication.SignIn(cookiesIdentity);
         }
 
+        public override async Task GrantRefreshToken(OAuthGrantRefreshTokenContext context)
+        {
+            // Change auth ticket for refresh token requests
+            var userManager = context.OwinContext.GetUserManager<ApplicationUserManager>();
+
+            ApplicationUser user = await userManager.FindByNameAsync(context.Ticket.Identity.Name);
+
+            var newIdentity = await user.GenerateUserIdentityAsync(userManager, OAuthDefaults.AuthenticationType);
+
+            var newTicket = new AuthenticationTicket(newIdentity, context.Ticket.Properties);
+            context.Validated(newTicket);
+        }
+        
         public override Task TokenEndpoint(OAuthTokenEndpointContext context)
         {
             foreach (KeyValuePair<string, string> property in context.Properties.Dictionary)

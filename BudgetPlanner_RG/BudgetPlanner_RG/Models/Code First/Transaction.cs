@@ -10,7 +10,7 @@ namespace BudgetPlanner_RG.Models
     {
         public int id { get; set; }
         public string Description { get; set; }
-        public string Type { get; set; }
+        public bool isDebit { get; set; }
 
         public decimal Amount { get; set; }
         public System.DateTimeOffset Created { get; set; }

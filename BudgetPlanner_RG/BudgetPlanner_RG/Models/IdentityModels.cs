@@ -1,4 +1,7 @@
-﻿using System.Security.Claims;
+﻿using System.Collections.Generic;
+using System.Data.Entity;
+using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.EntityFramework;
@@ -33,6 +36,54 @@ namespace BudgetPlanner_RG.Models
         public static ApplicationDbContext Create()
         {
             return new ApplicationDbContext();
+        }
+
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+
+        public async Task<bool> AddRefreshToken(RefreshToken token)
+        {
+
+            var existingToken = await RefreshTokens.SingleOrDefaultAsync(r => r.Subject == token.Subject);
+
+            if (existingToken != null)
+            {
+                var result = await RemoveRefreshToken(existingToken);
+            }
+
+            RefreshTokens.Add(token);
+
+            return await SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> RemoveRefreshToken(string refreshTokenId)
+        {
+            var refreshToken = await RefreshTokens.FindAsync(refreshTokenId);
+
+            if (refreshToken != null)
+            {
+                RefreshTokens.Remove(refreshToken);
+                return await SaveChangesAsync() > 0;
+            }
+
+            return false;
+        }
+
+        public async Task<bool> RemoveRefreshToken(RefreshToken refreshToken)
+        {
+            RefreshTokens.Remove(refreshToken);
+            return await SaveChangesAsync() > 0;
+        }
+
+        public async Task<RefreshToken> FindRefreshToken(string refreshTokenId)
+        {
+            var refreshToken = await RefreshTokens.FindAsync(refreshTokenId);
+
+            return refreshToken;
+        }
+
+        public List<RefreshToken> GetAllRefreshTokens()
+        {
+            return RefreshTokens.ToList();
         }
 
         public System.Data.Entity.DbSet<BudgetPlanner_RG.Models.BudgetItem> BudgetItems { get; set; }

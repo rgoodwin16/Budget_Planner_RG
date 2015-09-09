@@ -7,6 +7,7 @@ namespace BudgetPlanner_RG.Models
 {
     public class HouseHoldVM
     {
+        public string Name { get; set; }
         public List<HouseHoldAccount> Accounts { get; set; }
         public List<BudgetItem> BudgetItems { get; set; }
         public List<ApplicationUser> Users { get; set; }
